@@ -1,9 +1,4 @@
 #!/usr/bin/env python3
-"""
-Meemo Bot - Single file, offline, self-learning chat assistant for Termux.
-Uses only Python standard libraries and SQLite.
-"""
-
 import sqlite3
 import os
 import sys
@@ -14,6 +9,17 @@ import string
 import json
 import csv
 from collections import deque
+BANNER = """
+                    MEEmo BOT v1.0
+          Offline Self-Learning AI Assistant
+                 For Termux on Android
+
+If you enjoy using Meemo, consider supporting development:
+
+💰 Google pay: singhsumit.ragc-1@oksbi
+
+Every little bit helps keep Meemo improving! 🚀
+"""
 
 # =============================================================================
 # Database Manager
@@ -505,42 +511,41 @@ class ChatSession:
 
     def chat(self):
         """Start the chat loop."""
-        print("\n--- Chat Mode (type 'exit' to return to menu) ---")
+        print("\n--- Chat Mode (type 'exit' to return to menu, or press Ctrl+C to return to menu immediately) ---")
         while True:
-            user_input = input("You: ").strip()
-            if user_input.lower() == 'exit':
-                break
-            if not user_input:
-                continue
+            try:
+                user_input = input("You: ").strip()
+                if user_input.lower() == 'exit':
+                    break
+                if not user_input:
+                    continue
 
-            # Sentiment analysis
-            sentiment = self.processor.sentiment_score(user_input)
-            self.mood_history.append(sentiment)
+                # Sentiment analysis
+                sentiment = self.processor.sentiment_score(user_input)
+                self.mood_history.append(sentiment)
 
-            # Get AI response
-            response, conf = self.ai.get_response(user_input)
+                # Get AI response
+                response, conf = self.ai.get_response(user_input)
 
-            if response is None:
-                print("Meemo: I don't know how to respond. Please teach me.")
-                teach = input("What should I have said? ").strip()
-                if teach:
-                    self.ai.add_manual_entry(user_input, teach)
-                    bot_msg = teach
-                    print("Meemo: Thank you, I learned that.")
+                if response is None:
+                    print("Meemo: I don't know how to respond. Please teach me.")
+                    teach = input("What should I have said? ").strip()
+                    if teach:
+                        self.ai.add_manual_entry(user_input, teach)
+                        bot_msg = teach
+                        print("Meemo: Thank you, I learned that.")
+                    else:
+                        bot_msg = "Okay, maybe next time."
+                        print(f"Meemo: {bot_msg}")
                 else:
-                    bot_msg = "Okay, maybe next time."
-                    print(f"Meemo: {bot_msg}")
-            else:
-                prefix = self._get_tone_prefix(sentiment)
-                bot_msg = prefix + response
-                print(f"Meemo: {bot_msg} (confidence: {conf:.2f})")
+                    prefix = self._get_tone_prefix(sentiment)
+                    bot_msg = prefix + response
+                    print(f"Meemo: {bot_msg} (confidence: {conf:.2f})")
 
-            self._log(user_input, bot_msg)
-
-    def toggle_personality(self):
-        """Switch between casual and formal mode."""
-        self.personality = "formal" if self.personality == "casual" else "casual"
-        print(f"Personality mode set to: {self.personality}")
+                self._log(user_input, bot_msg)
+            except KeyboardInterrupt:
+                print("\n\nReturning to main menu...")
+                break
 
 # =============================================================================
 # Menu System
@@ -570,61 +575,70 @@ class Menu:
         print("10. Inject knowledge (paste directly)")
         print("11. Exit")
         print("-"*50)
+        print("Tip: Press Ctrl+C at any time to return to this menu.")
         print("Injection formats: JSON list with 'input'/'response' keys, or CSV with headers 'user_input,bot_response,weight'")
         print("Example JSON: [{\"input\":\"Hello\",\"response\":\"Hi!\"}]")
 
     def run(self):
         """Main menu loop."""
         while True:
-            self.display()
-            choice = input("Enter your choice: ").strip()
+            try:
+                self.display()
+                choice = input("Enter your choice: ").strip()
 
-            if choice == '1':
-                self.chat.chat()
-            elif choice == '2':
-                self._train_manual()
-            elif choice == '3':
-                self._view_knowledge()
-            elif choice == '4':
-                self._correct_last()
-            elif choice == '5':
-                self._reset_memory()
-            elif choice == '6':
-                self._export()
-            elif choice == '7':
-                self.chat.toggle_personality()
-            elif choice == '8':
-                self.ai.cluster_knowledge()
-            elif choice == '9':
-                self._inject_from_file()
-            elif choice == '10':
-                self.ai.inject_knowledge_paste()
-            elif choice == '11':
-                print("Goodbye from Meemo!")
-                self.db.close()
-                sys.exit(0)
-            else:
-                print("Invalid choice. Please try again.")
+                if choice == '1':
+                    self.chat.chat()
+                elif choice == '2':
+                    self._train_manual()
+                elif choice == '3':
+                    self._view_knowledge()
+                elif choice == '4':
+                    self._correct_last()
+                elif choice == '5':
+                    self._reset_memory()
+                elif choice == '6':
+                    self._export()
+                elif choice == '7':
+                    self.chat.toggle_personality()
+                elif choice == '8':
+                    self.ai.cluster_knowledge()
+                elif choice == '9':
+                    self._inject_from_file()
+                elif choice == '10':
+                    self.ai.inject_knowledge_paste()
+                elif choice == '11':
+                    print("Goodbye from Meemo!")
+                    self.db.close()
+                    sys.exit(0)
+                else:
+                    print("Invalid choice. Please try again.")
+            except KeyboardInterrupt:
+                print("\n\nReturning to main menu...")
+                continue
 
     def _train_manual(self):
         """Add a new Q&A pair manually."""
-        print("\n--- Manual Training ---")
-        q = input("Enter the user question: ").strip()
-        if not q:
-            print("Cancelled.")
-            return
-        a = input("Enter Meemo's answer: ").strip()
-        if not a:
-            print("Cancelled.")
-            return
-        self.ai.add_manual_entry(q, a)
-        print("Training complete.")
+        print("\n--- Manual Training (press Ctrl+C to cancel) ---")
+        try:
+            q = input("Enter the user question: ").strip()
+            if not q:
+                print("Cancelled.")
+                return
+            a = input("Enter Meemo's answer: ").strip()
+            if not a:
+                print("Cancelled.")
+                return
+            self.ai.add_manual_entry(q, a)
+            print("Training complete.")
+        except KeyboardInterrupt:
+            print("\nTraining cancelled.")
 
     def _view_knowledge(self):
         """Display all stored knowledge."""
         entries = self.db.get_all_entries()
         if not entries:
             print("No knowledge yet.")
+            input("\nPress Enter to continue...")
             return
         print("\n--- Knowledge Base ---")
         print(f"{'ID':<4} {'Weight':<6} {'Usage':<6} {'Question (truncated)':<30} {'Answer (truncated)'}")
@@ -633,55 +647,69 @@ class Menu:
             q_short = e['user_input'][:27] + "..." if len(e['user_input']) > 30 else e['user_input']
             a_short = e['bot_response'][:27] + "..." if len(e['bot_response']) > 30 else e['bot_response']
             print(f"{e['id']:<4} {e['weight']:<6.2f} {e['usage_count']:<6} {q_short:<30} {a_short}")
+        input("\nPress Enter to continue...")
 
     def _correct_last(self):
         """Correct the last response used in chat."""
         if self.ai.last_response_id is None:
             print("No last response recorded. Start a chat first.")
+            input("\nPress Enter to continue...")
             return
-        entry = self.db.get_entry_by_id(self.ai.last_response_id)
-        if not entry:
-            print("Last response no longer exists.")
-            return
-        print(f"Last response was to: '{entry['user_input']}'")
-        print(f"Meemo said: '{entry['bot_response']}'")
-        correct = input("Enter the correct answer: ").strip()
-        if correct:
-            self.ai.correct_last_response(correct)
-        else:
-            print("Cancelled.")
+        try:
+            entry = self.db.get_entry_by_id(self.ai.last_response_id)
+            if not entry:
+                print("Last response no longer exists.")
+                return
+            print(f"Last response was to: '{entry['user_input']}'")
+            print(f"Meemo said: '{entry['bot_response']}'")
+            correct = input("Enter the correct answer: ").strip()
+            if correct:
+                self.ai.correct_last_response(correct)
+            else:
+                print("Cancelled.")
+        except KeyboardInterrupt:
+            print("\nCancelled.")
 
     def _reset_memory(self):
         """Delete all knowledge."""
-        confirm = input("Are you sure you want to erase all memory? (yes/no): ").lower()
-        if confirm == 'yes':
-            self.db.delete_all()
-            print("Memory reset.")
-        else:
-            print("Cancelled.")
+        try:
+            confirm = input("Are you sure you want to erase all memory? (yes/no): ").lower()
+            if confirm == 'yes':
+                self.db.delete_all()
+                print("Memory reset.")
+            else:
+                print("Cancelled.")
+        except KeyboardInterrupt:
+            print("\nCancelled.")
 
     def _export(self):
         """Export database to CSV."""
-        filename = input("Enter filename (default: meemo_export.csv): ").strip()
-        if not filename:
-            filename = "meemo_export.csv"
-        self.db.export_to_csv(filename)
+        try:
+            filename = input("Enter filename (default: meemo_export.csv): ").strip()
+            if not filename:
+                filename = "meemo_export.csv"
+            self.db.export_to_csv(filename)
+        except KeyboardInterrupt:
+            print("\nExport cancelled.")
 
     def _inject_from_file(self):
         """Inject knowledge from a file."""
         print("\n--- Bulk Knowledge Injection from File ---")
-        filepath = input("Enter path to the file: ").strip()
-        if not filepath:
-            print("Cancelled.")
-            return
-        self.ai.inject_knowledge_from_file(filepath)
+        try:
+            filepath = input("Enter path to the file: ").strip()
+            if not filepath:
+                print("Cancelled.")
+                return
+            self.ai.inject_knowledge_from_file(filepath)
+        except KeyboardInterrupt:
+            print("\nInjection cancelled.")
 
 # =============================================================================
 # Main Application Entry Point
 # =============================================================================
 def main():
     """Initialize components and start the menu."""
-    print("Starting Meemo Bot...")
+    print(BANNER)
     db = Database()
     processor = TextProcessor()
     ai = AIEngine(db, processor)
