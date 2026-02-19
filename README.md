@@ -61,9 +61,9 @@ Or simply copy the single Python file to your Termux home and run it.
 
 Everything is contained in meemo_bot.py. When run, it creates:
 
-· knowledge.db – SQLite database
-· chat_log.txt – Conversation log
-· knowledge_export.csv – Exported knowledge (optional)
+· meemo_knowledge.db – SQLite database
+· meemo_chat_log.txt – Conversation log
+· meemo_export.csv – Exported knowledge (optional)
 
 ---
 
